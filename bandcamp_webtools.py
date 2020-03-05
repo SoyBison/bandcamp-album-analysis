@@ -1,4 +1,7 @@
+"""
+A Cache of tools that collect data from bandcamp. 
 
+"""
 import requests
 from bs4 import BeautifulSoup
 import os
