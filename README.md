@@ -32,7 +32,6 @@ In `Proposal.ipynb`, only very basic analysis tools are used. The most dominant 
 
 In `Prelims.ipynb`, more complicated statistical techniques are used, especially techniques like Latent Dirichlet Allocation, which are generally utilized in a text analysis setting. In a way, this is an attempt to treat color usage in album covers as a sort of natural language.
 
-
 ## Additional Information
 
 This project is currently ongoing, if you have any questions feel free to contact me through github or my website [email form](https://www.coeneedell.com/#contact). This project uses python, with a standard array of data science packages, plus the very excellent colorgram generating package [`colorgram.py`](https://pypi.org/project/colorgram.py/).
