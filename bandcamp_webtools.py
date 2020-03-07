@@ -1,5 +1,5 @@
 """
-A Cache of tools that collect data from bandcamp. 
+A Cache of tools that collect data from bandcamp and do analysis.
 """
 
 import requests
@@ -11,10 +11,12 @@ from functools import partial
 import pickle
 import numpy as np
 from PIL import Image
-from time import sleep
 from tqdm import tqdm
 import sys
 import colorgram
+import matplotlib.pyplot as plt
+import seaborn as sns
+import colorsys
 
 BCAMPURL = 'https://{ARTIST}.bandcamp.com'
 
@@ -53,7 +55,7 @@ def cowdog(earl, loc='artist_tags', loops=3, n=0):  # 'earl' like 'url'
     sys.stdout.write("\033[F")
     if n < loops:
         for album in urls:
-            cowdog(album, loc, loops, n+1)
+            cowdog(album, loc, loops, n + 1)
 
 
 def get_album_covers(tag, loc='./covers/'):
@@ -123,10 +125,11 @@ def make_colorgram(image_array, n=6):
     cs = [color.rgb for color in cs]
     return cs
 
+
 def colorgram_from_file(loc, sink='./colorgrams/', n=40, del_orig=False):
     with open(loc, 'rb') as f:
         album = pickle.load(f)
-    
+
     cg = make_colorgram(album['cover'], n)
     album.pop('cover', None)
     album['colorgram'] = cg
@@ -136,9 +139,10 @@ def colorgram_from_file(loc, sink='./colorgrams/', n=40, del_orig=False):
 
     with open(sink + str(hash(album['url'])), 'wb+') as f:
         pickle.dump(album, f)
-    
+
     if del_orig:
         os.remove(loc)
+
 
 def albums_to_colorgrams(source='./covers/', sink='./colorgrams/', n=40, del_orig=True):
     worker = partial(colorgram_from_file, sink=sink, n=n, del_orig=del_orig)
@@ -148,6 +152,39 @@ def albums_to_colorgrams(source='./covers/', sink='./colorgrams/', n=40, del_ori
     for i in tqdm(p.imap(worker, targets), total=len(targets)):
         nones.append(i)
 
+
+def brightness_plot(cols, tag):
+    brightnesses = [(0.299 * r + 0.587 * g + 0.114 * b) for gram in cols for col in gram for r, g, b in col]
+    brightnesses = np.array(brightnesses)
+    rs, gs, bs = zip(*[[r, g, b] for gram in cols for col in gram for r, g, b in col])
+
+    sns.distplot(brightnesses, color='black', hist=False)
+    sns.distplot(rs, color='red', hist=False)
+    sns.distplot(bs, color='blue', hist=False)
+    sns.distplot(gs, color='green', hist=False).set_title(f'Brightness plot for {tag}-tagged album covers.')
+    plt.show()
+
+
+def luminance(color):
+    r, g, b = color
+    return 0.299 * r + 0.587 * g + 0.114 * b
+
+
+def col_plot(cols, tag, size=48):
+    colors_unorganized = np.array(sorted([col for box in cols for img in box for col in img],
+                                         key=lambda rgb: colorsys.rgb_to_hls(*rgb)))
+    colors_unorganized.resize(size * size * 3)
+    colors_unorganized = colors_unorganized.reshape((size, -1, 3))
+    colors_unorganized = colors_unorganized
+    plt.matshow(colors_unorganized)
+    plt.title(f'Color Plot for {tag}-tagged album covers.')
+    plt.show()
+
+
+def get_tag_cols(tag, data):
+    tagged = data.iloc[[tag in tags for tags in data['tags']]]
+    cols = tagged['cgram'].reset_index(drop=True)
+    return cols
 
 
 if __name__ == '__main__':
