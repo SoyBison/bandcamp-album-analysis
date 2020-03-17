@@ -17,6 +17,8 @@ import colorgram
 import matplotlib.pyplot as plt
 import seaborn as sns
 import colorsys
+from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
 
 BCAMPURL = 'https://{ARTIST}.bandcamp.com'
 
@@ -244,5 +246,30 @@ def get_topics(model, n_feats=8):
     return outmat
 
 
+def mass_get_artists(tar='./targets'):
+    with open(tar, 'r') as f:
+        targets = f.readlines()
+    targets = [t.split('?')[0] for t in targets]
+    pool = mp.Pool()
+    lil_doggie = partial(cowdog, loops=2)
+    dog_pack = pool.imap(lil_doggie, targets)
+    for _ in tqdm(dog_pack):
+        pass
+
+def collect_targets(tag, tar='./targets'):
+    url = f'https://www.bandcamp.com/tag/{tag}'
+    options = webdriver.ChromeOptions()
+    options.add_argument('headless')
+    dr = webdriver.Chrome(options=options)
+    dr.get(url)
+    WebDriverWait(dr, 0.5)
+    soup = BeautifulSoup(dr.page_source, 'html.parser')
+    x = soup.findAll('a', target='_blank')
+    targets = [ele.attrs['href'] for ele in x]
+    targets = [t for t in targets if ('album' in t or 'track' in t) and ('&' not in t)]
+    with open(tar, 'w+') as f:
+        f.writelines('\n'.join(targets))
+
 if __name__ == '__main__':
-    albums_to_colorgrams()
+    collect_targets('chill')
+    mass_get_artists()
