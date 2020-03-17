@@ -117,7 +117,9 @@ def album_cover_scrape(cover_loc='./covers/', artist_loc='artist_tags'):
     pool = mp.Pool()
     worker = partial(get_album_covers, loc=cover_loc)
     artists = load_artist_tags(artist_loc)
-    pool.map(worker, tqdm(artists), chunksize=1)
+    j = pool.imap(worker, artists, chunksize=1000)
+    for i in tqdm(j, total=len(artists)):
+        pass
     return True
 
 
@@ -253,7 +255,7 @@ def mass_get_artists(tar='./targets'):
     pool = mp.Pool()
     lil_doggie = partial(cowdog, loops=2)
     dog_pack = pool.imap(lil_doggie, targets)
-    for _ in tqdm(dog_pack):
+    for _ in tqdm(dog_pack, total=len(targets)):
         pass
 
 def collect_targets(tag, tar='./targets'):
@@ -273,3 +275,5 @@ def collect_targets(tag, tar='./targets'):
 if __name__ == '__main__':
     collect_targets('chill')
     mass_get_artists()
+    album_cover_scrape()
+    albums_to_colorgrams(del_orig=False)
