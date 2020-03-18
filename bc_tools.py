@@ -19,6 +19,7 @@ import seaborn as sns
 import colorsys
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
+import time
 
 BCAMPURL = 'https://{ARTIST}.bandcamp.com'
 
@@ -44,11 +45,11 @@ def cowdog(earl, loc='artist_tags', loops=3, n=0):  # 'earl' like 'url'
     footer = soup.find_all('li', attrs={'class': re.compile('recommended-album footer')})
     urls = {album.find('a', class_='go-to-album album-link')['href'] for album in footer}
     artists = {re.findall('(?<=//)[a-z0-9-_~]*(?=.)', tag)[0] for tag in urls}
+    starter = re.findall('(?<=//)[a-z0-9-_~]*(?=.)', earl)[0]
 
-    if not os.path.exists(loc):
-        add_artist_tag(re.findall('(?<=//)[a-z0-9-_~]*(?=.)', earl)[0])
 
     knowns = load_artist_tags(loc)
+    artists.add(starter)
     for tag in artists:
         if tag not in knowns:
             add_artist_tag(tag, loc)
@@ -117,9 +118,7 @@ def album_cover_scrape(cover_loc='./covers/', artist_loc='artist_tags'):
     pool = mp.Pool()
     worker = partial(get_album_covers, loc=cover_loc)
     artists = load_artist_tags(artist_loc)
-    j = pool.imap(worker, artists, chunksize=1000)
-    for i in tqdm(j, total=len(artists)):
-        pass
+    pool.map(worker, artists)
     return True
 
 
@@ -252,11 +251,9 @@ def mass_get_artists(tar='./targets'):
     with open(tar, 'r') as f:
         targets = f.readlines()
     targets = [t.split('?')[0] for t in targets]
-    pool = mp.Pool()
-    lil_doggie = partial(cowdog, loops=2)
-    dog_pack = pool.imap(lil_doggie, targets)
-    for _ in tqdm(dog_pack, total=len(targets)):
-        pass
+    lil_doggie = partial(cowdog, loops=3)
+    for t in tqdm(targets):
+        lil_doggie(t)
 
 def collect_targets(tag, tar='./targets'):
     url = f'https://www.bandcamp.com/tag/{tag}'
@@ -269,11 +266,16 @@ def collect_targets(tag, tar='./targets'):
     x = soup.findAll('a', target='_blank')
     targets = [ele.attrs['href'] for ele in x]
     targets = [t for t in targets if ('album' in t or 'track' in t) and ('&' not in t)]
-    with open(tar, 'w+') as f:
+    with open(tar, 'a+') as f:
         f.writelines('\n'.join(targets))
 
 if __name__ == '__main__':
-    collect_targets('chill')
-    mass_get_artists()
-    album_cover_scrape()
+    done = False
+    while not done:
+        try:
+            done = album_cover_scrape()
+        except:
+            time.sleep(0.5)
+            pass
+
     albums_to_colorgrams(del_orig=False)
